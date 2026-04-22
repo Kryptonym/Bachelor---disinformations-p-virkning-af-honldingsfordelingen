@@ -1,0 +1,16 @@
+name: bachelor
+channels:
+  - defaults
+dependencies:
+  - networkx
+  - matplotlib
+  - python-igraph
+  - graphviz
+  - pyvis
+  - python=3.14
+  - scipy
+  - numpy
+  - pandas
+  - ipykernel
+  - tqdm
+prefix: /home/kryptonym/.conda/envs/bachelor
