@@ -4,8 +4,7 @@ import networkx as nx
 from tqdm import tqdm
 import os
 
-import Graf *
-
+from Graf import *
 
 def random_relations_uniform_graph(num_of_nodes,size_of_array):
     Graph =  nx.DiGraph()
