@@ -94,21 +94,26 @@ Graf_ba = ba_opinion_graph()
 
 Graf_ws = ws_opinion_graph()
 
-Graf_kh = hk_opinion_graph()
+Graf_hk = hk_opinion_graph()
 
 Graf_sbm = sbm_opinion_graph()
 
+print("tilfældig graf")
 show_opinion_histogram(Graf_random)
 degreedist(Graf_random,"spring")
 
+print("Barabási–Albert graf")
 show_opinion_histogram(Graf_ba)
 degreedist(Graf_ba,"spring")
 
+print("Watts–Strogatz graf (small world)")
 show_opinion_histogram(Graf_ws)
 degreedist(Graf_ws,"spring")
 
-show_opinion_histogram(Graf_kh)
-degreedist(Graf_kh,"spring")
+print("Holme–Kim graf (powerlaw cluster)")
+show_opinion_histogram(Graf_hk)
+degreedist(Graf_hk,"spring")
 
+print("Stochastic block model graf")
 show_opinion_histogram(Graf_sbm)
 degreedist(Graf_sbm,"spring")
