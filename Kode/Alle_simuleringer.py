@@ -12,8 +12,9 @@ print('Done loading functions')
 
 
 
-steps = 10000
-Graf =  random_relations_graph(1000,150)
+steps = 200
+Graf =  random_relations_graph(1000,500)
+degreedist(Graf,"circular")
 print('Simulering: Ingen medier ingen disinfo ikke dynamiske kanter')
 start_cond, end_state, all_avg_opinions,all_avg_distances = simple_simulation(Graf,steps)
 #show_simulation_results(start_cond, end_state, all_avg_opinions,all_avg_distances)
