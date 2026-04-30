@@ -36,6 +36,15 @@ def update_opinion(Graph,learning_rate=0.1):
     return Graph , Average_opinion
 
 
+def drop_probability(opinion_diff, tolerance):
+    # No chance of dropping if within tolerance
+    if opinion_diff <= tolerance:
+        return 0.0
+    # Scales from 0 (just outside tolerance) to 1 (max disagreement of 2.0)
+    excess = opinion_diff - tolerance
+    max_excess = 2.0 - tolerance  # opinions are presumably in [0,1] or [-1,1]
+    return min(excess / max_excess, 1.0)
+
 def update_edges_for_person(Graph,amount_of_std):
     G = Graph.copy()
     all_opinions = [G.nodes[n]['opinion'] for n in G.nodes()]
@@ -73,21 +82,62 @@ def update_edges_for_person(Graph,amount_of_std):
 
            # --- Drop far away connections ---
            preds = list(G.predecessors(node))
-           for pred in preds:  # ← same indent level as preds = list(...)
+           for pred in preds:
                pred_opinion = G.nodes[pred]['opinion']
-               if abs(current_node_opinion - pred_opinion) > tolerance:
-                   G.remove_edge(pred, node)
+               diff = abs(current_node_opinion - pred_opinion)
+               if diff > tolerance:
+                   prob = drop_probability(diff, tolerance)
+                   if random.random() < prob:
+                       G.remove_edge(pred, node)
     return G
 
-def update_edges_for_media(Graph,amount_of_std):
+def update_edges_for_media(Graph, amount_of_std):
     G = Graph.copy()
-    nodes =  Graph.nodes()
+    all_opinions = [G.nodes[n]['opinion'] for n in G.nodes()]
+    opinion_std = np.std(all_opinions)
+    tolerance = amount_of_std * opinion_std
 
-    return None
+    human_nodes = [n for n, d in G.nodes(data=True) if d.get('type') == 'Human']
+    media_nodes = [n for n, d in G.nodes(data=True) if d.get('type') == 'Media']
+
+    for media in media_nodes:
+        media_opinion = G.nodes[media]['opinion']
+        current_targets = set(G.successors(media))
+
+        for human in human_nodes:
+            if human in current_targets:
+                continue
+            diff = abs(media_opinion - G.nodes[human]['opinion'])
+            if diff < tolerance:
+                connect_prob = 1 - (diff / tolerance)  # closer = more likely to connect
+                if random.random() < connect_prob:
+                    weight = round(1 - diff, 2)
+                    G.add_edge(media, human, weight=weight)
+
+    return G
 
 
-def update_edges_for_disinformation(Graph,amount_of_std):
+def update_edges_for_disinformation(Graph, amount_of_std):
     G = Graph.copy()
-    nodes =  Graph.nodes()
+    all_opinions = [G.nodes[n]['opinion'] for n in G.nodes()]
+    opinion_std = np.std(all_opinions)
+    tolerance = amount_of_std * opinion_std
 
-    return None
+    human_nodes = [n for n, d in G.nodes(data=True) if d.get('type') == 'Human']
+    disinfo_nodes = [n for n, d in G.nodes(data=True) if d.get('type') == 'Disinfo']
+
+    for disinfo in disinfo_nodes:
+        disinfo_opinion = G.nodes[disinfo]['opinion']
+        current_targets = set(G.successors(disinfo))
+
+        for human in human_nodes:
+            if human in current_targets:
+                continue
+            diff = abs(disinfo_opinion - G.nodes[human]['opinion'])
+            if diff < tolerance:
+                connect_prob = 1 - (diff / tolerance)
+                if random.random() < connect_prob:
+                    weight = round(1 - diff, 2)
+                    G.add_edge(disinfo, human, weight=weight)
+
+    return G
