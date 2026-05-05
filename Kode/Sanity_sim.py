@@ -20,7 +20,11 @@ Graf_ws_normal = ws_opinion_graph(1000)
 Graf_hk_normal = hk_opinion_graph(1000)
 Graf_sbm_normal = sbm_opinion_graph([500,500])
 
-#degreedist(Graf_ba_normal,"spring")
+degreedist(Graf_random_normal,"spring")
+degreedist(Graf_ba_normal,"spring")
+degreedist(Graf_ws_normal,"spring")
+degreedist(Graf_hk_normal,"spring")
+degreedist(Graf_sbm_normal,"spring")
 
 print('Gen, af grafer med uniformfordelte holdninger')
 Graf_random_uni =  random_relations_uniform_graph(1000,150)
