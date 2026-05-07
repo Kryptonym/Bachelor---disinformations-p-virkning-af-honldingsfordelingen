@@ -1,5 +1,8 @@
-
-
+import numpy as np
+import matplotlib.pyplot as plt
+import networkx as nx
+from tqdm import tqdm
+import os
 
 def update_opinion_matrix(A, opinions, learningrates):
     # Row-normalize by absolute weight sum (same as total_weight in your loop)
