@@ -5,13 +5,13 @@ from tqdm import tqdm
 import os
 np.random.seed(11)
 
-from Sanity_graf import ws_opinion_graph
+from Sanity_graf import *
 from Matrix_graph import *
 from Matrix_simulering import *
 from Simulering import save_simulation_results
 
 
-A =  ws_opinion_graph()
+A =  sbm_opinion_graph([500,500])
 
 B ,_,_= create_matrix_rep(A)
 
