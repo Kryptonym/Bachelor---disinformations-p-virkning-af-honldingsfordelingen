@@ -10,13 +10,14 @@ from Matrix_graph import *
 from Matrix_simulering import *
 from Simulering import save_simulation_results
 
-
+print("start")
 A =  sbm_opinion_graph([500,500])
-
+print("matrix gen")
 B ,_,_= create_matrix_rep(A)
 
-print(B)
+print("Sim")
 
 start_cond, end_state,all_avg_opinions,all_avg_distances = simple_simulation_matrix(A,100)
 
 save_simulation_results_matrix(start_cond, end_state,all_avg_opinions,all_avg_distances,'Ingen_medier_ingen_disinfo_ikke_dynamiske_kanter','png','resultater/simulering_matrix')
+print("done")
