@@ -11,7 +11,7 @@ from Matrix_simulering import *
 from Simulering import save_simulation_results
 
 print("start")
-A =  sbm_opinion_graph([500,500])
+A =  sbm_opinion_graph([5000,5000])
 print("matrix gen")
 B ,_,_= create_matrix_rep(A)
 
