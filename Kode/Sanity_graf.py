@@ -52,7 +52,7 @@ def ba_opinion_uniform_graph(n=50, m=2):
 
 def ws_opinion_uniform_graph(n=50, k=4, p=0.1):
     #small world graf
-    G_base = nx.watts_strogatz_graph(n, k, p)
+    G_base = nx.newman_watts_strogatz_graph(n, k, p)
     G = nx.DiGraph()
     for node in range(n):
         G.add_node(node,
@@ -153,7 +153,7 @@ def ba_opinion_polar_graph(n=50, m=2):
 
 def ws_opinion_polar_graph(n=50, k=4, p=0.1):
     #small world graf
-    G_base = nx.watts_strogatz_graph(n, k, p)
+    G_base = nx.newman_watts_strogatz_graph(n, k, p)
     G = nx.DiGraph()
     for node in range(n):
         G.add_node(node,

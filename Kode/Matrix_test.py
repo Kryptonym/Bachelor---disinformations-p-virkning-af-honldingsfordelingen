@@ -11,9 +11,12 @@ from Matrix_simulering import *
 from Simulering import *
 
 print("start")
-A =  sbm_opinion_graph([500,500])
+A =  ws_opinion_graph(10,5,0.1)
 print("matrix gen")
-B ,_,_= create_matrix_rep(A)
+B ,C,D= create_matrix_rep(A)
+
+degreedist(A,"circular")
+degreedist(B,"circular")
 
 print("Sim")
 start_cond, end_state,all_avg_opinions,all_avg_distances = simple_simulation_matrix(A,100)
@@ -22,3 +25,15 @@ start_cond, end_state,all_avg_opinions,all_avg_distances = simple_simulation_mat
 
 save_simulation_results_matrix(start_cond, end_state,all_avg_opinions,all_avg_distances,'Ingen_medier_ingen_disinfo_ikke_dynamiske_kanter','png','resultater/simulering_matrix')
 print("done")
+print("Print B_0")
+print(B[0])
+print("Print B")
+print(B)
+print("Print C")
+print(C)
+print("Print D")
+print(D)
+print("Print start cond")
+print(start_cond)
+print("Print end cond")
+print(end_state)
