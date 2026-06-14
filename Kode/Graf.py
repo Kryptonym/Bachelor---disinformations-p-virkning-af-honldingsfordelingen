@@ -182,7 +182,7 @@ def add_disinfo_nodes(Graph, num_of_disinfo_nodes, reach=None):
 
 
 def illustration_of_graph(Graph):
-    pos = nx.spring_layout(Graph, seed=42)
+    pos = nx.circular_layout(Graph)
 
     nx.draw_networkx_nodes(Graph, pos,
                            node_color="steelblue",
