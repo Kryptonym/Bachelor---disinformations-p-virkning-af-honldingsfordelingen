@@ -1,22 +1,65 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
+import scipy as sp
+from scipy.stats import truncnorm
 from tqdm import tqdm
 import os
+from dataclasses import dataclass
 
-def ws_opinion_graph(n=50, k=4, p=0.1):
-    #small world graf
-    G_base = nx.newman_watts_strogatz_graph(n, k, p)
+
+
+def ws_opinion_graph(n=50, k=4, p=0.1, seed = None):
+    """
+    Creates a Watts-Strogatz-graph also known as a small world graph / network
+    Uses nx.newman_watts_strogatz_graph, so that the connections out of the node is not at the expense of a neighbour. example: a node has k=4 and an extra
+    edge out.
+
+        Parameters:
+            n: int (default 50), how many nodes in the graph
+            k: int  (default 4), how many neighbours a nodes has
+            p: float (between 0 and 1, default 0.1) the likelihood that a node has a connection out
+        Node-attributes:
+            opinion: float (between -1 and 1) randomly assigned through a normal distribution between -1 and 1. Represents the opinion of the node
+            learningrate: float (between 0.1 and 0.5) how accepting/ how easy influenced a node is
+            acceptrate: float (0 for disabled or else between 0 and 1) used for dynamic edges. How accepting of differing opnion the nodes is.
+                        how far the other node can be from you in the normal distribution before cutoff
+            type: string describes what the nodes is representing: Human, media or disinformation
+        Edge_attribute:
+            Weight: Float (between 0 and 1) normally distributed how much influence does a node have on another node.
+        Returns:
+            G: The graf
+
+    """
+    rng = np.random.default_rng(seed)
+
+    G_base = nx.newman_watts_strogatz_graph(n, k, p, seed=seed)
     G = nx.DiGraph()
+
+    # Normalfordelte holdninger mellem -1 og 1
+    mean_op, sd_op, low_op, high_op = 0, 0.5, -1, 1
+    a, b = (low_op - mean_op) / sd_op, (high_op - mean_op) / sd_op
+
+    # Normalfordelte kantværdier mellem 0 og 1
+    mean_edge, sd_edge, low_edge, high_edge = 0.5, 0.25, 0, 1
+    c, d = (low_edge - mean_edge) / sd_edge, (high_edge - mean_edge) / sd_edge
+
+    opinions = np.round(truncnorm.rvs(a, b, loc=mean_op, scale=sd_op, size=n, random_state=rng), 2)
+    learning_rates = rng.uniform(0.1, 0.5, size=n)
+
     for node in range(n):
         G.add_node(node,
-            opinion=np.round(np.clip(np.random.randn() * 0.5, -1, 1), 2),
-            learningrate=np.random.uniform(0.1, 0.5),
+            opinion=opinions[node],
+            learningrate=learning_rates[node],
             acceptrate=0, type='Human')
-    for x, y in G_base.edges():
-        weight = round(np.clip(np.random.randn() * 0.5, -1, 1), 2)
-        G.add_edge(x, y, weight=weight)
-        G.add_edge(y, x, weight=weight)
+
+    edges = list(G_base.edges())
+    w_xy = np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=len(edges), random_state=rng), 2)
+    w_yx = np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=len(edges), random_state=rng), 2)
+
+    for (x, y), wxy, wyx in zip(edges, w_xy, w_yx):
+        G.add_edge(x, y, weight=wxy)
+        G.add_edge(y, x, weight=wyx)
     return G
 
 
@@ -44,7 +87,7 @@ def add_media_nodes(Graph, num_of_media_nodes, reach=None):
         acceptrate  = 1 - np.random.uniform(0.01, 0.1)
 
         Graph.add_node(media_id, opinion=opinion, learningrate=0.0,acceptrate= acceptrate,
-                       type='Media', reach=round(media_reach, 2))
+                       type='Media', reach=np.round(media_reach, 2))
 
         targets = np.random.choice(num_of_humans, size=num_reached, replace=False)
         for human in targets:
@@ -93,10 +136,42 @@ def add_disinfo_nodes(Graph, num_of_disinfo_nodes, reach=None):
 
 
 
-def create_matrix_rep(Graf):
-    nodes =  sorted(Graf.nodes())
-    mat_graf= nx.to_numpy_array(Graf,nodelist = nodes)
+# def create_matrix_rep(Graf):
+#     nodes =  sorted(Graf.nodes())
+#     matrix_graf_rep= nx.to_numpy_array(Graf,nodelist = nodes,weight="weight")
 
-    opinions     = np.array([Graf.nodes[n]['opinion']     for n in nodes])
-    learningrate = np.array([Graf.nodes[n]['learningrate'] for n in nodes])
-    return mat_graf, opinions, learningrate
+#     opinions_vector     = np.array([Graf.nodes[n]['opinion']     for n in nodes])
+#     learningrate_vector = np.array([Graf.nodes[n]['learningrate'] for n in nodes])
+#     acceptrate_vector = np.array([Graf.nodes[n]['acceptrate'] for n in nodes])
+#     type_vector = np.array([Graf.nodes[n]['type'] for n in nodes])
+#     return matrix_graf_rep, opinions_vector,learningrate_vector, acceptrate_vector,type_vector
+
+def create_matrix_rep_with_media(Graf):
+    return None
+def create_matrix_rep_with_media_with_disinfo(Graf):
+    return None
+
+
+@dataclass
+class GraphState:
+    matrix: np.ndarray
+    opinions: np.ndarray
+    learningrate: np.ndarray
+    acceptrate: np.ndarray
+    type: np.ndarray
+
+def create_matrix_rep(Graf):
+    nodes = sorted(Graf.nodes())
+    matrix_graf_rep     = nx.to_numpy_array(Graf, nodelist=nodes, weight="weight")
+    opinions_vector     = np.array([Graf.nodes[n]['opinion']      for n in nodes])
+    learningrate_vector = np.array([Graf.nodes[n]['learningrate'] for n in nodes])
+    acceptrate_vector   = np.array([Graf.nodes[n]['acceptrate']   for n in nodes])
+    type_vector         = np.array([Graf.nodes[n]['type']         for n in nodes])
+
+    return GraphState(
+        matrix=matrix_graf_rep,
+        opinions=opinions_vector,
+        learningrate=learningrate_vector,
+        acceptrate=acceptrate_vector,
+        type=type_vector,
+    )
