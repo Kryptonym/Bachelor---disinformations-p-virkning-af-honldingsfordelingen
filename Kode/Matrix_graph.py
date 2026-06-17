@@ -63,7 +63,7 @@ def ws_opinion_graph(n=50, k=4, p=0.1, seed = None):
     return G
 
 
-def add_media_nodes(Graph, num_of_media_nodes, reach=None):
+def add_media_nodes(state, num_of_media_nodes, reach=None, seed=None):
     """
     Adds media nodes to an existing graph.
     Media nodes broadcast to a random (or specified) percent of the population.
@@ -74,29 +74,41 @@ def add_media_nodes(Graph, num_of_media_nodes, reach=None):
         reach: float (0-1) to fix reach for all media nodes,
                or None to randomise each media node's reach independently
     """
+    Graph = state_to_graph(state)
+    rng = np.random.default_rng(seed)
+
+
     human_nodes = [n for n, d in Graph.nodes(data=True) if d['type'] == 'Human']
     num_of_humans = len(human_nodes)
 
+    # Normalfordelte holdninger mellem -1 og 1
+    mean_op, sd_op, low_op, high_op = 0.5, 0.25, 0, 1
+    a, b = (low_op - mean_op) / sd_op, (high_op - mean_op) / sd_op
+
+    # Normalfordelte kantværdier mellem 0 og 1
+    mean_edge, sd_edge, low_edge, high_edge = 0.5, 0.25, 0, 1
+    c, d = (low_edge - mean_edge) / sd_edge, (high_edge - mean_edge) / sd_edge
+
+    next_id = max(Graph.nodes()) + 1
 
     for i in range(num_of_media_nodes):
-        media_id = num_of_humans + i
-        opinion = np.round(np.clip(np.random.randn() * 0.5, -0.5, 0.5), 2)
-
-        media_reach = reach if reach is not None else np.random.uniform(0, 1)
+        media_id = next_id + i
+        opinion = np.round(truncnorm.rvs(a, b, loc=mean_op, scale=sd_op, size=1, random_state=rng)[0], 2)
+        media_reach = reach if reach is not None else rng.uniform(0, 1)
         num_reached = int(np.floor(media_reach * num_of_humans))
-        acceptrate  = 1 - np.random.uniform(0.01, 0.1)
+        acceptrate = 1 - rng.uniform(0.01, 0.1)
 
-        Graph.add_node(media_id, opinion=opinion, learningrate=0.0,acceptrate= acceptrate,
-                       type='Media', reach=np.round(media_reach, 2))
+        Graph.add_node(media_id, opinion=opinion, learningrate=0.0, acceptrate=acceptrate,
+                        type='Media', reach=np.round(media_reach, 2))
 
-        targets = np.random.choice(num_of_humans, size=num_reached, replace=False)
+        targets = rng.choice(human_nodes, size=num_reached, replace=False)
         for human in targets:
-            weight = np.round(np.clip(np.random.randn() * 0.5, -1, 1), 2)
+            weight = np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
             Graph.add_edge(media_id, human, weight=weight)
 
-    return Graph
+    return create_matrix_rep(Graph)
 
-def add_disinfo_nodes(Graph, num_of_disinfo_nodes, reach=None):
+def add_disinfo_nodes(state, num_of_disinfo_nodes, reach=None, seed=None):
     """
     Adds disinfo nodes to an existing graph.
     Disinfo nodes broadcast to a random (or specified) percent of the population.
@@ -107,49 +119,46 @@ def add_disinfo_nodes(Graph, num_of_disinfo_nodes, reach=None):
         reach: float (0-1) to fix reach for all media nodes,
                or None to randomise each media node's reach independently
     """
+
+    Graph = state_to_graph(state)
+    rng = np.random.default_rng(seed)
+
+    # Normalfordelte holdninger mellem -1 og 1
+    mean_op, sd_op, low_op, high_op = -0.5, 0.25, -1, 0
+    a, b = (low_op - mean_op) / sd_op, (high_op - mean_op) / sd_op
+
+    # Normalfordelte kantværdier mellem 0 og 1
+    mean_edge, sd_edge, low_edge, high_edge = 0.5, 0.25, 0, 1
+    c, d = (low_edge - mean_edge) / sd_edge, (high_edge - mean_edge) / sd_edge
+
+
     human_nodes = [n for n, d in Graph.nodes(data=True) if d['type'] == 'Human']
     media_nodes = [n for n, d in Graph.nodes(data=True) if d['type'] == 'Media']
     num_of_humans = len(human_nodes)
     num_of_media = len(media_nodes)
     num_of_total = num_of_humans + num_of_media
 
-    for i in range(num_of_disinfo_nodes):
-        disinfo_id = num_of_total + i
-        opinion = np.round(np.clip(np.random.randn() * 0.5, -0.5, 0.5), 2)+0.5
+    next_id = max(Graph.nodes()) + 1
 
-        media_reach = reach if reach is not None else np.random.uniform(0, 0.05)
+
+    for i in range(num_of_disinfo_nodes):
+        disinfo_id = next_id + i
+        opinion = np.round(truncnorm.rvs(a, b, loc=mean_op, scale=sd_op, size=1, random_state=rng)[0], 2)
+
+        media_reach = reach if reach is not None else rng.uniform(0, 0.05)
         num_reached = int(np.floor(media_reach * num_of_humans))
-        acceptrate  = 1 - np.random.uniform(0.01, 0.1)
+        acceptrate  = 1 - rng.uniform(0.01, 0.1)
 
         Graph.add_node(disinfo_id, opinion=opinion, learningrate=0.0,acceptrate= acceptrate,
-                       type='Media', reach=round(media_reach, 2))
+                       type='Disinformation', reach=round(media_reach, 2))
 
-        targets = np.random.choice(num_of_humans, size=num_reached, replace=False)
+        targets = rng.choice(num_of_humans, size=num_reached, replace=False)
         for human in targets:
-            weight = np.round(np.clip(np.random.randn() * 0.5, -1, 1), 2)
+            weight = np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
             Graph.add_edge(disinfo_id, human, weight=weight)
 
-    return Graph
+    return create_matrix_rep(Graph)
 
-
-
-
-
-
-# def create_matrix_rep(Graf):
-#     nodes =  sorted(Graf.nodes())
-#     matrix_graf_rep= nx.to_numpy_array(Graf,nodelist = nodes,weight="weight")
-
-#     opinions_vector     = np.array([Graf.nodes[n]['opinion']     for n in nodes])
-#     learningrate_vector = np.array([Graf.nodes[n]['learningrate'] for n in nodes])
-#     acceptrate_vector = np.array([Graf.nodes[n]['acceptrate'] for n in nodes])
-#     type_vector = np.array([Graf.nodes[n]['type'] for n in nodes])
-#     return matrix_graf_rep, opinions_vector,learningrate_vector, acceptrate_vector,type_vector
-
-def create_matrix_rep_with_media(Graf):
-    return None
-def create_matrix_rep_with_media_with_disinfo(Graf):
-    return None
 
 
 @dataclass
@@ -175,3 +184,14 @@ def create_matrix_rep(Graf):
         acceptrate=acceptrate_vector,
         type=type_vector,
     )
+
+
+def state_to_graph(state):
+    n = len(state.opinions)
+    G = nx.from_numpy_array(state.matrix, create_using=nx.DiGraph)
+    for i in range(n):
+        G.nodes[i]['opinion']      = state.opinions[i]
+        G.nodes[i]['learningrate'] = state.learningrate[i]
+        G.nodes[i]['acceptrate']   = state.acceptrate[i]
+        G.nodes[i]['type']         = state.type[i]
+    return G
