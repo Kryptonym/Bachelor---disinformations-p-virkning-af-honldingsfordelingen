@@ -81,7 +81,7 @@ def add_media_nodes(state, num_of_media_nodes, reach=None, seed=None):
     human_nodes = [n for n, d in Graph.nodes(data=True) if d['type'] == 'Human']
     num_of_humans = len(human_nodes)
 
-    # Normalfordelte holdninger mellem -1 og 1
+    # Normalfordelte holdninger mellem 0 og 1
     mean_op, sd_op, low_op, high_op = 0.5, 0.25, 0, 1
     a, b = (low_op - mean_op) / sd_op, (high_op - mean_op) / sd_op
 
