@@ -195,3 +195,52 @@ def state_to_graph(state):
         G.nodes[i]['acceptrate']   = state.acceptrate[i]
         G.nodes[i]['type']         = state.type[i]
     return G
+
+
+
+
+
+def add_media_nodes_full_normal_dist(state, num_of_media_nodes, reach=None, seed=None):
+    """
+    Adds media nodes to an existing graph.
+    Media nodes broadcast to a random (or specified) percent of the population.
+
+    Parameters:
+        Graph: existing nx.DiGraph()
+        num_of_media_nodes: how many media nodes to add
+        reach: float (0-1) to fix reach for all media nodes,
+               or None to randomise each media node's reach independently
+    """
+    Graph = state_to_graph(state)
+    rng = np.random.default_rng(seed)
+
+
+    human_nodes = [n for n, d in Graph.nodes(data=True) if d['type'] == 'Human']
+    num_of_humans = len(human_nodes)
+
+    # Normalfordelte holdninger mellem 0 og 1
+    mean_op, sd_op, low_op, high_op = 0, 0.5, -1, 1
+    a, b = (low_op - mean_op) / sd_op, (high_op - mean_op) / sd_op
+
+    # Normalfordelte kantværdier mellem 0 og 1
+    mean_edge, sd_edge, low_edge, high_edge = 0.5, 0.25, 0, 1
+    c, d = (low_edge - mean_edge) / sd_edge, (high_edge - mean_edge) / sd_edge
+
+    next_id = max(Graph.nodes()) + 1
+
+    for i in range(num_of_media_nodes):
+        media_id = next_id + i
+        opinion = np.round(truncnorm.rvs(a, b, loc=mean_op, scale=sd_op, size=1, random_state=rng)[0], 2)
+        media_reach = reach if reach is not None else rng.uniform(0, 1)
+        num_reached = int(np.floor(media_reach * num_of_humans))
+        acceptrate = 1 - rng.uniform(0.01, 0.1)
+
+        Graph.add_node(media_id, opinion=opinion, learningrate=0.0, acceptrate=acceptrate,
+                        type='Media', reach=np.round(media_reach, 2))
+
+        targets = rng.choice(human_nodes, size=num_reached, replace=False)
+        for human in targets:
+            weight = np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
+            Graph.add_edge(media_id, human, weight=weight)
+
+    return create_matrix_rep(Graph)
