@@ -42,7 +42,7 @@ def simpel_simulering(Graph_state,timesteps):
     weight_sum = matrix.sum(axis=0)
     ops_through_time =  []
 
-    for i in range(timesteps):
+    for i in tqdm(range(timesteps), desc="Simulating"):
         opinions =time_step_no_media_no_disinfo(matrix,opinions,learningrate,weight_sum)
         ops_through_time.append(opinions)
 
