@@ -1,7 +1,8 @@
 import numpy as np
 np.random.seed(11)
 print('Loading functions')
-from Sanity_graf import ba_opinion_polar_graph, ba_opinion_uniform_graph, hk_opinion_polar_graph, hk_opinion_uniform_graph, random_relations_polar_graph, random_relations_uniform_graph, sbm_opinion_polar_graph, sbm_opinion_uniform_graph, ws_opinion_polar_graph, ws_opinion_uniform_graph
+from Matrix_graph import er_opinion_graph
+from Sanity_graf import *
 from Simuleringslogik import *
 from Simulering import *
 from Graf import *
@@ -14,9 +15,9 @@ print('Done loading functions')
 
 steps = 100
 print('Gen, af grafer med normalfordelte holdninger')
-Graf_random_normal =  random_relations_graph(1000,150)
+Graf_random_normal =  er_opinion_graph(10000,p=0.015,seed = 11)
 Graf_ba_normal = ba_opinion_graph(1000,2)
-Graf_ws_normal = ws_opinion_graph(1000)
+Graf_ws_normal = ws_opinion_graph(10000,150,0.1,seed = 11)
 Graf_hk_normal = hk_opinion_graph(1000)
 Graf_sbm_normal = sbm_opinion_graph([500,500])
 
@@ -27,16 +28,16 @@ Graf_sbm_normal = sbm_opinion_graph([500,500])
 # degreedist(Graf_sbm_normal,"spring")
 
 print('Gen, af grafer med uniformfordelte holdninger')
-Graf_random_uni =  random_relations_uniform_graph(1000,150)
+Graf_random_uni =  er_opinion_uniform_graph(10000,p =0.015,seed = 11)
 Graf_ba_uni = ba_opinion_uniform_graph(1000,2)
 Graf_hk_uni = hk_opinion_uniform_graph(1000)
-Graf_ws_uni = ws_opinion_uniform_graph(1000)
+Graf_ws_uni = ws_opinion_uniform_graph(10000,150,0.1,seed = 11)
 Graf_sbm_uni = sbm_opinion_uniform_graph([500,500])
 
 print('Gen, af grafer med polar holdninger')
-Graf_random_polar =  random_relations_polar_graph(1000,150)
+Graf_random_polar =  er_opinion_polar_graph(10000,p = 0.015, seed = 11)
 Graf_ba_polar = ba_opinion_polar_graph(1000,2)
-Graf_ws_polar = ws_opinion_polar_graph(1000)
+Graf_ws_polar = ws_opinion_polar_graph(10000,150,0.1,seed = 11)
 Graf_hk_polar = hk_opinion_polar_graph(1000)
 Graf_sbm_polar = sbm_opinion_polar_graph([500,500])
 

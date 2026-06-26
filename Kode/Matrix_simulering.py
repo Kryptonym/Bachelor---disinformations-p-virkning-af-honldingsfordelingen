@@ -2,7 +2,7 @@ from Matrix_graph import ws_opinion_graph, create_matrix_rep, GraphState, add_me
 from Matrix_simuleringslogik import time_step_no_media_no_disinfo, simpel_simulering, data_processing
 import numpy as np
 import matplotlib.pyplot as plt
-TestGraf =  ws_opinion_graph(1000,15,0.1,seed = 11)
+TestGraf =  ws_opinion_graph(10000,150,0.1,seed = 11)
 
 MatrixGraf = create_matrix_rep(TestGraf)
 

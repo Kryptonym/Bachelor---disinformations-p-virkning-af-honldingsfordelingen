@@ -74,6 +74,54 @@ def data_processing(ops_through_time,mask):
 
 
 
+def in_and_out_degree_sum(Graph_state, node_type=None):
+    """
+    Returns the in-degree and out-degree weight sums for each node.
+    Parameters:
+        Graph_state: GraphState
+        node_type: str or None. If None, returns all nodes.
+                   If 'Human', 'Media', or 'Disinformation', filters to that type.
+    Returns:
+        indegree:  np.ndarray, sum of incoming edge weights per node
+        outdegree: np.ndarray, sum of outgoing edge weights per node
+    """
+    matrix = Graph_state.matrix
+
+    if node_type is not None:
+        mask = Graph_state.type == node_type
+        submatrix = matrix[np.ix_(mask, mask)]
+    else:
+        submatrix = matrix
+
+    indegree  = submatrix.sum(axis=0)  # sum over rows → incoming per column (node)
+    outdegree = submatrix.sum(axis=1)  # sum over cols → outgoing per row (node)
+
+    return indegree, outdegree
 
 
+
+def cross_type_degree(Graph_state, source_type, target_type):
+    """
+    Returns the summed edge weights from source_type nodes to target_type nodes.
+    For each target node: how much total influence it receives from source_type.
+    For each source node: how much total influence it sends to target_type.
+
+    Parameters:
+        Graph_state: GraphState
+        source_type: str, e.g. 'Media' or 'Disinformation'
+        target_type: str, e.g. 'Human'
+    Returns:
+        influence_received: np.ndarray, shape (num_targets,) — total incoming weight per target node
+        influence_sent:     np.ndarray, shape (num_sources,) — total outgoing weight per source node
+    """
+    source_mask = Graph_state.type == source_type
+    target_mask = Graph_state.type == target_type
+
+    # submatrix[i, j] = weight from source_i to target_j
+    submatrix = Graph_state.matrix[np.ix_(source_mask, target_mask)]
+
+    influence_received = submatrix.sum(axis=0)  # per target: sum over all sources
+    influence_sent     = submatrix.sum(axis=1)  # per source: sum over all targets
+
+    return influence_received, influence_sent
 
