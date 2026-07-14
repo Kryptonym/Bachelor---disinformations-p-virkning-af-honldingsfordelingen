@@ -13,6 +13,23 @@ from dataclasses import dataclass
 # G_ws = ws_opinion_graph(n=n, k=k, p=0.1, seed=42)
 # G_er = er_opinion_graph(n=n, p=p_er, seed=42)
 
+
+def _normalize_in_weights(G, nodes=None):
+    """
+    Makes the weight matrix row-stochastic in the DeGroot sense:
+    for each node in `nodes` (or all nodes if None), the INCOMING
+    edge weights are scaled so they sum to 1. This means each node's
+    opinion update is a proper weighted average of its influencers.
+    """
+    target_nodes = nodes if nodes is not None else G.nodes()
+    for node in target_nodes:
+        in_edges = list(G.in_edges(node, data=True))
+        total = sum(d['weight'] for _, _, d in in_edges)
+        if total > 0:
+            for u, v, d in in_edges:
+                G[u][v]['weight'] = d['weight'] / total
+    return G
+
 def ws_opinion_graph(n=50, k=4, p=0.1, seed = None,factor = 1.0):
     """
     Creates a Watts-Strogatz-graph also known as a small world graph / network
@@ -64,6 +81,8 @@ def ws_opinion_graph(n=50, k=4, p=0.1, seed = None,factor = 1.0):
     for (x, y), wxy, wyx in zip(edges, w_xy, w_yx):
         G.add_edge(x, y, weight=wxy)
         G.add_edge(y, x, weight=wyx)
+
+    G=_normalize_in_weights(G)
     return G
 
 
@@ -116,6 +135,8 @@ def er_opinion_graph(n=50, p=0.1, seed=None, factor=1.0):
         G.add_edge(x, y, weight=wxy)
         G.add_edge(y, x, weight=wyx)
 
+    G=_normalize_in_weights(G)
+
     return G
 
 
@@ -163,6 +184,8 @@ def add_media_nodes(state, num_of_media_nodes, reach=None,factor = 1.0, seed=Non
         for human in targets:
             weight = factor* np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
             Graph.add_edge(media_id, human, weight=weight)
+
+    Graph=_normalize_in_weights(Graph)
 
     return create_matrix_rep(Graph)
 
@@ -214,6 +237,8 @@ def add_disinfo_nodes(state, num_of_disinfo_nodes, reach=None,factor = 1.0, seed
         for human in targets:
             weight = factor* np.round( truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
             Graph.add_edge(disinfo_id, human, weight=weight)
+ 
+    Graph=_normalize_in_weights(Graph)
 
     return create_matrix_rep(Graph)
 
@@ -351,5 +376,132 @@ def add_media_nodes_polar(state, num_of_media_nodes, reach=None, factor=1.0,seed
         for human in targets:
             weight = factor* np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
             Graph.add_edge(media_id, human, weight=weight)
+
+    return create_matrix_rep(Graph)
+
+
+def spectral_grap(G_matrix,epsilon =0.01):
+    
+    
+    row_sums = G_matrix.sum(axis=1, keepdims=True)
+    row_sums[row_sums == 0] = 1
+    T = G_matrix / row_sums
+
+
+
+    eigenvalues = np.linalg.eigvals(T)
+    
+    eigenvalues_sorted = sorted(np.abs(eigenvalues), reverse=True)
+
+    lambda_1 = eigenvalues_sorted[0]
+    lambda_2 = eigenvalues_sorted[1]
+    gap      = lambda_1 - lambda_2
+
+    return {
+        "lambda_1"     : lambda_1,
+        "lambda_2"     : lambda_2,
+        "spectral_gap" : gap,
+        "consensus_time": np.log(1/epsilon) / gap if gap > 0 else np.inf
+    }
+
+
+
+
+def add_media_nodes_polar_no_overlap(state, factor=1.0, seed=None):
+    """
+    Adds exactly 2 media nodes to an existing graph.
+    One media node has opinion = 1, the other opinion = -1.
+    The human population is split into two non-overlapping halves,
+    each half listening exclusively to one of the two media nodes.
+
+    Parameters:
+        state: existing state (converted to nx.DiGraph via state_to_graph)
+        factor: scaling factor applied to edge weights
+        seed: seed for reproducibility
+    """
+    Graph = state_to_graph(state)
+    rng = np.random.default_rng(seed)
+
+    human_nodes = [n for n, d in Graph.nodes(data=True) if d['type'] == 'Human']
+    num_of_humans = len(human_nodes)
+
+    # Normalfordelte kantværdier mellem 0 og 1
+    mean_edge, sd_edge, low_edge, high_edge = 0.5, 0.25, 0, 1
+    c, d = (low_edge - mean_edge) / sd_edge, (high_edge - mean_edge) / sd_edge
+
+    next_id = max(Graph.nodes()) + 1
+
+    # Shuffle and split humans into two non-overlapping halves
+    shuffled_humans = rng.permutation(human_nodes)
+    half = num_of_humans // 2
+    group_pos = shuffled_humans[:half]        # listens to opinion = 1
+    group_neg = shuffled_humans[half:]        # listens to opinion = -1
+
+    media_configs = [
+        {"id": next_id,     "opinion": 1.0,  "targets": group_pos},
+        {"id": next_id + 1, "opinion": -1.0, "targets": group_neg},
+    ]
+
+    for cfg in media_configs:
+        media_id = cfg["id"]
+        opinion = cfg["opinion"]
+        targets = cfg["targets"]
+        reach = len(targets) / num_of_humans if num_of_humans > 0 else 0.0
+        acceptrate = 1 - rng.uniform(0.01, 0.1)
+
+        Graph.add_node(media_id, opinion=opinion, learningrate=0.0, acceptrate=acceptrate,
+                        type='Media', reach=np.round(reach, 2))
+
+        for human in targets:
+            weight = factor * np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
+            Graph.add_edge(media_id, human, weight=weight)
+
+    Graph = _normalize_in_weights(Graph)
+
+    return create_matrix_rep(Graph)
+
+
+
+def add_media_nodes_polar_full_overlap(state, factor=1.0, seed=None):
+    """
+    Adds exactly 2 media nodes to an existing graph.
+    One media node has opinion = 1, the other opinion = -1.
+    Both media nodes are connected to ALL human nodes (full reach, full overlap).
+
+    Parameters:
+        state: existing state (converted to nx.DiGraph via state_to_graph)
+        factor: scaling factor applied to edge weights
+        seed: seed for reproducibility
+    """
+    Graph = state_to_graph(state)
+    rng = np.random.default_rng(seed)
+
+    human_nodes = [n for n, d in Graph.nodes(data=True) if d['type'] == 'Human']
+    num_of_humans = len(human_nodes)
+
+    # Normalfordelte kantværdier mellem 0 og 1
+    mean_edge, sd_edge, low_edge, high_edge = 0.5, 0.25, 0, 1
+    c, d = (low_edge - mean_edge) / sd_edge, (high_edge - mean_edge) / sd_edge
+
+    next_id = max(Graph.nodes()) + 1
+
+    media_configs = [
+        {"id": next_id,     "opinion": 1.0},
+        {"id": next_id + 1, "opinion": -1.0},
+    ]
+
+    for cfg in media_configs:
+        media_id = cfg["id"]
+        opinion = cfg["opinion"]
+        acceptrate = 1 - rng.uniform(0.01, 0.1)
+
+        Graph.add_node(media_id, opinion=opinion, learningrate=0.0, acceptrate=acceptrate,
+                        type='Media', reach=1.0)
+
+        for human in human_nodes:
+            weight = factor * np.round(truncnorm.rvs(c, d, loc=mean_edge, scale=sd_edge, size=1, random_state=rng)[0], 2)
+            Graph.add_edge(media_id, human, weight=weight)
+
+    Graph = _normalize_in_weights(Graph)
 
     return create_matrix_rep(Graph)
